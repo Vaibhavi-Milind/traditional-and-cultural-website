@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive India Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    /* Map Styling */
+    #map { height: 700px; }
+
+    /* Info Box Styling */
+    #info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: white;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      width: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+      font-size: 16px;
+      opacity: 0; /* Start hidden */
+      transition: opacity 0.5s ease-in-out; /* Fade-in transition */
+    }
+
+    /* Information Sections Styling */
+    .info-section {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+    }
+
+    .info-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Optional: Cursor Change on Hover */
+    .leaflet-interactive {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="info">Click on a state to see details here</div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <!-- Your GeoJSON Data -->
+  <script src="in.js"></script> <!-- Ensure this file defines 'indiaStatesData' -->
+
+  <script>
+    // Initialize the Map
+    var map = L.map('map').setView([20.5937, 78.9629], 5); // Center on India
+
+    // Add OpenStreetMap Tile Layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Function to Generate Random Colors (Optional)
+    function getColor(d) {
+      // Generate a random color or use a predefined color scheme
+      return '#' + Math.floor(Math.random()*16777215).toString(16);
+    }
+
+    // Function to Clear Previous Highlights
+    function resetHighlight(e) {
+      geojson.resetStyle(e.target);
+    }
+
+    // Function to Highlight Feature on Hover
+    function highlightFeature(e) {
+      var layer = e.target;
+
+      layer.setStyle({
+        weight: 3,
+        color: '#666',
+        fillOpacity: 0.7
+      });
+
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        layer.bringToFront();
+      }
+    }
+
+    // Reference to the GeoJSON Layer (for resetting styles)
+    var geojson;
+
+    // Add GeoJSON Layer to Map
+    geojson = L.geoJSON(indiaStatesData, {
+      style: function (feature) {
+        return {
+          color: "#000000", // Outline color
+          weight: 2,        // Outline width
+          fillColor: getColor(feature.properties.name), // Random fill color
+          fillOpacity: 0.5  // Fill opacity
+        };
+      },
+      onEachFeature: function (feature, layer) {
+        layer.on({
+          click: function (e) {
+            // Zoom to the clicked state
+            map.fitBounds(e.target.getBounds());
+
+            // Display Information with Transitions
+            displayInfo(feature.properties);
+          },
+          mouseover: highlightFeature,
+          mouseout: resetHighlight
+        });
+      }
+    }).addTo(map);
+
+    // Function to Display Information with Transitions
+    function displayInfo(properties) {
+      var infoDiv = document.getElementById('info');
+      infoDiv.innerHTML = ''; // Clear previous content
+      infoDiv.style.opacity = 1; // Make the info box visible
+
+      // Define the information sections
+      var sections = [
+        { title: "State", content: properties.name },
+        { title: "Languages", content: properties.languages },
+        { title: "Dance Forms", content: properties.dance_forms },
+        { title: "Cuisine", content: properties.cuisine },
+        { title: "Festivals", content: properties.festivals },
+        { title: "Traditional Attire", content: properties.traditional_attire },
+        { title: "Historical Monuments/UNESCO Sites", content: properties.historical_monuments_UNESCO_sites }
+      ];
+
+      // Function to Create and Append Sections with Delay
+      sections.forEach(function(section, index) {
+        setTimeout(function() {
+          var sectionDiv = document.createElement('div');
+          sectionDiv.className = 'info-section';
+          sectionDiv.innerHTML = `<strong>${section.title}:</strong> ${section.content}`;
+          infoDiv.appendChild(sectionDiv);
+
+          // Trigger the transition
+          setTimeout(function() {
+            sectionDiv.classList.add('visible');
+          }, 50); // Slight delay to ensure CSS transition
+
+        }, index * 300); // Delay each section by 300ms
+      });
+    }
+
+    // Optional: Close Info Box When Clicking Outside
+    map.on('click', function(e) {
+      var infoDiv = document.getElementById('info');
+      if (e.originalEvent.target.tagName !== 'path') { // Assuming states are rendered as SVG paths
+        infoDiv.style.opacity = 0; // Hide the info box
+        infoDiv.innerHTML = 'Click on a state to see details here'; // Reset content
+      }
+    });
+
+  </script>
+</body>
+</html>
